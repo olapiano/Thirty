@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">Thirty</string>
+    <string name="title_activity_view_points">ViewPointsActivity</string>
+
+    <string name="dice_image_description">Dice image</string>
+
+    <string name="game_finished_text">Game finished</string>
+    <string name="category_text">Category</string>
+    <string name="selected_text">Selected</string>
+    <string name="total_points_text">Total: </string>
+
+    <string name="save_points_button">Save Points</string>
+    <string name="roll_button">Roll</string>
+    <string name="view_results_button">View Results</string>
+    <string name="select_category_button">Select Category</string>
+    <string name="back_button">Back</string>
+    <string name="restart_button">Restart Game</string>
+
+    <string name="points_added_to_toast">Points added to</string>
+    <string name="game_finished_toast">Game finished!</string>
+
+</resources>
