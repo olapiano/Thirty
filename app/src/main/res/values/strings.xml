@@ -7,7 +7,7 @@
     <string name="game_finished_text">Game finished</string>
     <string name="category_text">Category</string>
     <string name="selected_text">Selected</string>
-    <string name="total_points_text">Total: </string>
+    <string name="total_points_text">TOTAL: </string>
 
     <string name="save_points_button">Save Points</string>
     <string name="roll_button">Roll</string>
@@ -15,8 +15,14 @@
     <string name="select_category_button">Select Category</string>
     <string name="back_button">Back</string>
     <string name="restart_button">Restart Game</string>
+    <string name="affirmative_button">Yes</string>
+    <string name="no_button">No</string>
 
     <string name="points_added_to_toast">Points added to</string>
     <string name="game_finished_toast">Game finished!</string>
+
+    <string name="dialog_restart_game_message">Do you want to restart game?</string>
+    <string name="alert_message_title">Alert!</string>
+    <string name="high_score">HIGH SCORE</string>
 
 </resources>

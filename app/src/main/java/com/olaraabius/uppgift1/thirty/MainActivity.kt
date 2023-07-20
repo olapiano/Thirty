@@ -1,9 +1,13 @@
 package com.olaraabius.uppgift1.thirty
 
-import android.content.Intent
+import android.app.Activity
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,15 +30,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
-import com.olaraabius.uppgift1.thirty.controller.ThirtyGame
 import com.olaraabius.uppgift1.thirty.ui.theme.ThirtyTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
+import com.olaraabius.uppgift1.thirty.model.PointsCategory
 import kotlinx.coroutines.launch
 
 /**
@@ -44,24 +54,15 @@ import kotlinx.coroutines.launch
  * @since 2023-06-26
  */
 
-// private const val TAG = "MainActivity"
-
-/** Instance of the controller class */
-private var game = ThirtyGame()
-/** Data updated from the ViewPointsActivity */
-private var restartGame = false
+private const val TAG = "MainActivity"
 
 class MainActivity : ComponentActivity() {
+    private val gameModel: GameViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        /** Data received from ViewPointsActivity user clicked Restart Game */
-        restartGame = intent.extras?.getBoolean("restart") == true
-        /** Restarts game if restartGame = true */
-        if (restartGame) {
-            game = ThirtyGame()
-            restartGame = false
-        }
+        Log.d(TAG, this@MainActivity.toString())
 
         setContent {
             ThirtyTheme {
@@ -70,7 +71,21 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Layout()
+                    Layout(
+                        gameModel::getImages,
+                        gameModel::getPoints,
+                        gameModel::getPointsCategoriesAvailable,
+                        gameModel::getPointsCategorySelected,
+                        gameModel::getPointsFromDices,
+                        gameModel::getRolls,
+                        gameModel::isRollAllowed,
+                        gameModel::isSaveAllowed,
+
+                        gameModel::addPoints,
+                        gameModel::clickDice,
+                        gameModel::restartGame,
+                        gameModel::rollDices,
+                        gameModel::selectPointsCategory)
                 }
             }
         }
@@ -78,45 +93,83 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Layout() {
-    var currentDiceImages by remember { mutableStateOf (game.getImages()) }
+fun Layout(
+    getImages: () -> List<Int>,
+    getPoints: () -> List<Int>,
+    getPointsCategoriesAvailable: () -> List<PointsCategory>,
+    getPointsCategorySelected: () -> String,
+    getPointsFromDices: () -> List<Int>,
+    getRolls: () -> Int,
+    isRollAllowed: () -> Boolean,
+    isSaveAllowed: () -> Boolean,
+    addPoints: () -> Boolean,
+    clickDice: (diceIndex: Int) -> Unit,
+    restartGame: () -> Unit,
+    rollDices: () -> Unit,
+    selectPointsCategory: (category: PointsCategory) -> Unit
+    ) {
+    var currentDiceImages by remember { mutableStateOf (getImages()) }
     var dropdownExpanded by remember { mutableStateOf(false) }
-    var isRollAllowed by remember { mutableStateOf (game.isRollAllowed()) }
-    var selectedMenuItem by remember { mutableStateOf(game.getPointsCategorySelected()) }
-    var menuItems by remember { mutableStateOf(game.getPointsCategoriesAvailable()) }
-    var pointsFromDices by remember { mutableStateOf(game.getPointsFromDices()) }
-    var pointsList by remember { mutableStateOf(game.getPoints()) }
-    var rolls by remember { mutableStateOf(game.getRolls()) }
-    var menuButtonEnabled by remember { mutableStateOf(game.getPointsCategoriesAvailable().isNotEmpty()) }
-    var savePointsButtonEnabled by remember { mutableStateOf(game.isSaveAllowed()) }
-    val context = LocalContext.current
+    var rollAllowed by remember { mutableStateOf (isRollAllowed()) }
+    var selectedMenuItem by remember { mutableStateOf(getPointsCategorySelected()) }
+    var menuItems by remember { mutableStateOf(getPointsCategoriesAvailable()) }
+    var pointsFromDices by remember { mutableStateOf(getPointsFromDices()) }
+    var pointsList by remember { mutableStateOf(getPoints()) }
+    var rolls by remember { mutableStateOf(getRolls()) }
+    var menuButtonEnabled by remember { mutableStateOf(getPointsCategoriesAvailable().isNotEmpty()) }
+    var savePointsButtonEnabled by remember { mutableStateOf(isSaveAllowed()) }
     val snackState = remember { SnackbarHostState() }
     val snackScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
+
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (it.resultCode == Activity.RESULT_OK) {
+            restartGame()
+            currentDiceImages = getImages()
+            rollAllowed = isRollAllowed()
+            selectedMenuItem = getPointsCategorySelected()
+            menuItems = getPointsCategoriesAvailable()
+            pointsFromDices = getPointsFromDices()
+            pointsList = getPoints()
+            rolls = getRolls()
+            menuButtonEnabled = getPointsCategoriesAvailable().isNotEmpty()
+            savePointsButtonEnabled = isSaveAllowed()
+        }
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 64.dp, bottom = 24.dp)
+            .padding(top = if (screenWidth < 600) 312.dp else 64.dp, bottom = 24.dp)
     ) {
 
         /*
             Top row that contains the dice images
          */
-        Row {
-            List(currentDiceImages.size) {
-                index ->
-                    Image(
-                        painter = painterResource(currentDiceImages[index]),
-                        contentDescription = stringResource(R.string.dice_image_description),
-                        modifier = Modifier
-                            .padding(10.dp)
-                            .clickable {
-                                game.clickDice(index)
-                                currentDiceImages = game.getImages()
-                            }
-                    )
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(128.dp),
+            verticalArrangement = Arrangement.spacedBy(64.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            itemsIndexed(currentDiceImages) {index, item ->
+                Image(
+                    painter = painterResource(item),
+                    contentDescription = stringResource(R.string.dice_image_description),
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clickable {
+                            clickDice(index)
+                            currentDiceImages = getImages()
+                        }
+                )
             }
         }
 
@@ -138,7 +191,7 @@ fun Layout() {
                     .fillMaxWidth()
                     .padding(6.dp)
                     ) {
-                Text(if(game.getPointsCategoriesAvailable().isEmpty()) stringResource(R.string.game_finished_text) else "${stringResource(R.string.category_text)} $selectedMenuItem ${stringResource(R.string.selected_text)}")
+                Text(if(getPointsCategoriesAvailable().isEmpty()) stringResource(R.string.game_finished_text) else "${stringResource(R.string.category_text)} $selectedMenuItem ${stringResource(R.string.selected_text)}")
             }
             Row {
 
@@ -157,12 +210,11 @@ fun Layout() {
                     ) {
                         Text(stringResource(R.string.select_category_button))
                     }
+
                     Button (
                         onClick = {
-                            val intent = Intent(context, ViewPointsActivity::class.java)
-                            val points = pointsList as ArrayList<Int>
-                            intent.putIntegerArrayListExtra("points", points)
-                            context.startActivity(intent)
+                            val intent = ViewPointsActivity.newIntent(context, pointsList)
+                            launcher.launch(intent)
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -177,39 +229,39 @@ fun Layout() {
                 ) {
                     Button(
                         onClick = {
-                            game.rollDices()
-                            pointsFromDices = game.getPointsFromDices()
-                            currentDiceImages = game.getImages()
-                            isRollAllowed = game.isRollAllowed()
-                            rolls = game.getRolls()
+                            rollDices()
+                            pointsFromDices = getPointsFromDices()
+                            currentDiceImages = getImages()
+                            rollAllowed = isRollAllowed()
+                            rolls = getRolls()
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = isRollAllowed
+                        enabled = rollAllowed
                     ) {
                         Text("${stringResource(R.string.roll_button)} ($rolls)")
                     }
 
                     Button (
                         onClick = {
-                            if (game.addPoints()) {
-                                isRollAllowed = game.isRollAllowed()
-                                menuItems = game.getPointsCategoriesAvailable()
+                            if (addPoints()) {
+                                rollAllowed = isRollAllowed()
+                                menuItems = getPointsCategoriesAvailable()
                                 if (menuItems.isNotEmpty()) {
                                     val message = "${context.resources.getString(R.string.points_added_to_toast)} $selectedMenuItem"
                                     selectedMenuItem = menuItems[0].name
-                                    game.selectPointsCategory(menuItems[0])
+                                    selectPointsCategory(menuItems[0])
                                     snackScope.launch { snackState.showSnackbar(message) }
                                 } else {
                                     menuButtonEnabled = false
                                     val message = context.resources.getString(R.string.game_finished_text)
                                     snackScope.launch { snackState.showSnackbar(message) }
                                 }
-                                pointsList = game.getPoints()
-                                rolls = game.getRolls()
-                                isRollAllowed = game.isRollAllowed()
-                                savePointsButtonEnabled = game.isSaveAllowed()
-                                currentDiceImages = game.getImages()
-                                pointsFromDices = game.getPointsFromDices()
+                                pointsList = getPoints()
+                                rolls = getRolls()
+                                rollAllowed = isRollAllowed()
+                                savePointsButtonEnabled = isSaveAllowed()
+                                currentDiceImages = getImages()
+                                pointsFromDices = getPointsFromDices()
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -225,6 +277,7 @@ fun Layout() {
     /*
         Menu with the points categories left
      */
+
     DropdownMenu(
         expanded = dropdownExpanded,
         onDismissRequest = { dropdownExpanded = false }
@@ -241,10 +294,10 @@ fun Layout() {
                     Text("${pointsFromDices[it.ordinal]}")
                 } },
                 onClick = {
-                    game.selectPointsCategory(it)
+                    selectPointsCategory(it)
                     dropdownExpanded = false
-                    isRollAllowed = game.isRollAllowed()
-                    selectedMenuItem = game.getPointsCategorySelected()
+                    rollAllowed = isRollAllowed()
+                    selectedMenuItem = getPointsCategorySelected()
                 }
             )
         }
@@ -256,10 +309,12 @@ fun Layout() {
     SnackbarHost(hostState = snackState)
 }
 
+
+
 @Preview(showBackground = true)
 @Composable
 fun LayoutPreview() {
     ThirtyTheme {
-        Layout()
+
     }
 }
